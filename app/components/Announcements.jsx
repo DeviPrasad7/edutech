@@ -1,58 +1,43 @@
+// Announcements.jsx
 'use client';
-import { useState, useEffect } from 'react';
-import AddAnnouncementModal from './AddAnnouncementsModal';
+import useSWR from 'swr'; // Import SWR
+
+// The fetcher function is a simple wrapper around fetch
+const fetcher = (url) => fetch(url).then((res) => res.json());
 
 export default function Announcements() {
-  const [announcements, setAnnouncements] = useState([]);
-  const [showModal, setShowModal] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
+  // Use the SWR hook for data fetching
+  // It returns data, error, and isLoading states automatically
+  const { data, error, isLoading } = useSWR('/api/announcements', fetcher);
 
-  // Fetch announcements (re-runs when refreshKey changes)
-  useEffect(() => {
-    fetch('/api/announcements')
-      .then(res => res.json())
-      .then(data => setAnnouncements(data.announcements || []))
-      .catch(error => console.error('Error fetching announcements:', error));
-  }, [refreshKey]);
+  if (isLoading) {
+    return <p className="text-gray-400 text-center py-8">Loading announcements...</p>;
+  }
 
-  // Handler to refresh announcements after adding new one
-  const handleAnnouncementAdded = () => {
-    setRefreshKey(prev => prev + 1); // Triggers useEffect to refetch
-  };
+  if (error || !data?.announcements) {
+    return <p className="text-rose-400 text-center py-8">Failed to load announcements.</p>;
+  }
+
+  const { announcements } = data;
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Announcements</h2>
-        <button
-          onClick={() => setShowModal(true)}
-          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition font-medium"
-        >
-          + Add Announcement
-        </button>
-      </div>
-
       {announcements.length === 0 ? (
         <p className="text-gray-500 text-center py-8">No announcements yet.</p>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {announcements.map((ann) => (
-            <div key={ann._id} className="bg-gray-50 p-4 rounded-lg border-l-4 border-blue-500">
-              <h3 className="font-semibold text-lg text-gray-800 mb-2">{ann.title}</h3>
-              <p className="text-gray-700 mb-2">{ann.content}</p>
-              <p className="text-sm text-gray-500">
+            <div key={ann._id} className="bg-slate-700 p-6 rounded-lg border-l-4 border-indigo-500 shadow-sm">
+              <h3 className="font-semibold text-lg text-white mb-2">{ann.title}</h3>
+              <p className="text-gray-300 mb-2">{ann.content}</p>
+              <p className="text-sm text-gray-400">
                 {new Date(ann.postedAt).toLocaleDateString()}
               </p>
             </div>
           ))}
         </div>
       )}
-
-      <AddAnnouncementModal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        onAdded={handleAnnouncementAdded}
-      />
+      {/* The Add button is now in page.js, so we don't need the modal here */}
     </div>
   );
 }

@@ -1,32 +1,57 @@
+// app/api/chatbot/route.js
+
 import { NextResponse } from 'next/server';
 
 export async function POST(request) {
   try {
-    const { assignmentText } = await request.json();
-    if (!assignmentText?.trim()) {
-      return NextResponse.json({ error: 'Assignment text is required' }, { status: 400 });
+    const { message, chatHistory } = await request.json();
+
+    if (!message?.trim()) {
+      return new Response('Message text is required', { status: 400 });
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
+    if (!apiKey) {
+      return new Response('GEMINI_API_KEY is not configured on the server.', { status: 500 });
+    }
 
-    // Prompt or API call to evaluate assignment
-    const res = await fetch('https://api.gemini.ai/evaluate-assignment', {
+    // UPDATED: Changed to the latest non-deprecated model for better rate limits.
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`;
+
+    const systemPrompt = `You are EduSphere AI, a helpful and encouraging teaching assistant. Your goal is to help students learn. Based on the provided chat history and the user's latest message, provide a concise and helpful response. Keep your answers conversational.`;
+
+    const fullPrompt = `${systemPrompt}\n\n--- CHAT HISTORY ---\n${chatHistory
+      .map((msg) => `${msg.from}: ${msg.text}`)
+      .join('\n')}\n\n--- NEW MESSAGE ---\nuser: ${message}`;
+
+    const res = await fetch(API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({ assignmentText }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{ text: fullPrompt }],
+        }],
+      }),
     });
 
     if (!res.ok) {
-      const errText = await res.text();
-      return NextResponse.json({ error: `Gemini API error: ${errText}` }, { status: res.status });
+      const errorBody = await res.json();
+      console.error('Gemini API Error:', errorBody);
+      const errorMessage = errorBody?.error?.message || 'Failed to get a response from the AI model.';
+      return new Response(errorMessage, { status: res.status });
     }
 
     const data = await res.json();
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
-    return NextResponse.json({ evaluation: data.evaluation || 'No evaluation returned' });
+    if (!reply) {
+      return new Response('Received an empty reply from the AI model.', { status: 500 });
+    }
+
+    return NextResponse.json({ reply });
+
   } catch (error) {
-    console.error('Evaluate Assignment API error:', error);
-    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+    console.error('Chatbot API error:', error);
+    return new Response(error.message || 'Internal Server Error', { status: 500 });
   }
 }

@@ -57,7 +57,7 @@ export default function MaterialsList() {
                 href={fileUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary hover:underline"
+                className="text-primary p-2 rounded-2xl bg-purple-200 hover:bg-purple-400"
               >
                 View Material
               </a>
