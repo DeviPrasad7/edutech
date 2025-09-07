@@ -3,7 +3,8 @@
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 
-export default function UploadMaterialForm({ onUploadSuccess }) {
+export default function UploadMaterialForm({ onUploadSuccess = () => {} }) {
+  console.log('UploadMaterialForm onUploadSuccess prop:', typeof onUploadSuccess);
   const {
     register,
     handleSubmit,

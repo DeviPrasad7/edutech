@@ -17,7 +17,7 @@ export async function GET(request) {
 
     if (!user) {
       // Optionally create user in DB if not exists
-      user = await User.create({ clerkId, role: 'student' });
+      user = await User.create({ clerkId, role: 'teacher' });
     }
 
     return NextResponse.json({ user });

@@ -1,18 +1,11 @@
+// models/Assignment.js
 import mongoose from 'mongoose';
 
 const AssignmentSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  description: { type: String },
+  title: { type: String, required: true, trim: true },
+  description: { type: String, trim: true },
   dueDate: { type: Date, required: true },
-  submissions: [
-    {
-      userId: { type: String },                  // Clerk user ID
-      content: { type: String },                 // Assignment content / answer
-      submittedAt: { type: Date, default: Date.now },
-      grade: { type: Number },                    // Numeric grade
-      feedback: { type: String },                 // Teacher feedback/comments
-    },
-  ],
+  courseId: { type: String }, // Optional: To associate with a course
   createdAt: { type: Date, default: Date.now },
 });
 

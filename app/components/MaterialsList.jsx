@@ -61,7 +61,7 @@ export default function MaterialsList({ refreshKey }) {
                 <p className="text-gray-400 mb-4 text-sm">{material.description}</p>
                 <div className="flex flex-wrap gap-2 mb-4">
                   {material.tags.map(tag => (
-                    <span key={tag} className="text-xs bg-slate-700 text-gray-300 px-2 py-1 rounded-full">{tag}</span>
+                    <span key={tag} className="text-xs bg-slate-700 text-gray-300 px-2 py-1 rounded-full border-grey-200 border-1">{tag}</span>
                   ))}
                 </div>
               </div>
