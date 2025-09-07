@@ -1,63 +1,79 @@
-import { NextResponse } from 'next/server';
+// app/api/generate-questions/route.js
 
-function extractTextFromContent(content) {
-  if (typeof content === 'string') return content;
-  if (Array.isArray(content)) {
-    return content
-      .map((part) => (typeof part === 'string' ? part : extractTextFromContent(part.text || part.parts || '')))
-      .join('\n');
-  }
-  if (content && typeof content === 'object') {
-    if (content.text) return content.text;
-    if (content.parts) return extractTextFromContent(content.parts);
-  }
-  return '';
-}
+import { NextResponse } from 'next/server';
 
 export async function POST(request) {
   try {
-    const { subject, topic, numQuestions = 5 } = await request.json();
+    const { subject, topic, numQuestions } = await request.json();
 
-    if (!subject?.trim() || !topic?.trim() || isNaN(numQuestions) || numQuestions <= 0) {
-      return NextResponse.json({ error: 'Invalid request parameters' }, { status: 400 });
+    if (!subject || !topic || !numQuestions) {
+      return new Response('Missing required fields: subject, topic, or numQuestions', { status: 400 });
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
+    if (!apiKey) {
+      return new Response('GEMINI_API_KEY is not configured', { status: 500 });
+    }
 
-    const promptText = `Generate ${numQuestions} multiple choice questions with answers on the topic "${topic}" in subject "${subject}". Format clearly with question and options.`;
+    // UPDATED: Using 'gemini-2.0-flash' which has a higher free-tier rate limit (15 RPM).
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    
+    // This strict prompt forces the AI to return clean JSON, which is essential.
+    const strictPrompt = `
+      You are a JSON-only question generator. Your entire response MUST be a single, valid JSON object and nothing else. Do not include any introductory text, closing remarks, or markdown code blocks.
 
-    const res = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+      The JSON object must contain a single key: "questions".
+      The value of "questions" must be an array of exactly ${numQuestions} objects.
+      Each object in the array MUST have three keys: "question" (a string), "options" (an array of strings), and "answer" (a string).
+      If a question is not multiple-choice, the "options" array MUST be an empty array [].
+
+      Subject: ${subject}
+      Topic: ${topic}
+
+      Example of a valid response format:
       {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-goog-api-key': apiKey,
-        },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: promptText }] }],
-        }),
+        "questions": [
+          {
+            "question": "What is the capital of France?",
+            "options": ["London", "Berlin", "Paris", "Madrid"],
+            "answer": "Paris"
+          }
+        ]
       }
-    );
+    `;
+
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: strictPrompt }] }],
+        generationConfig: {
+          response_mime_type: "application/json",
+        },
+      }),
+    });
 
     if (!res.ok) {
-      const errText = await res.text();
-      return NextResponse.json({ error: `Gemini API error: ${errText}` }, { status: res.status });
+      const errorBody = await res.json();
+      throw new Error(errorBody?.error?.message || 'Failed to get a valid response from the AI model.');
     }
 
     const data = await res.json();
-    const content = data.candidates?.[0]?.content || '';
-    const rawText = extractTextFromContent(content);
-    const questions = rawText.split('\n').filter(Boolean);
+    const aiResponseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
-    return NextResponse.json({
-      questions,
-      count: questions.length,
-      formatted: questions.join('\n\n'), // additional pretty format string
-    });
+    if (!aiResponseText) {
+      throw new Error('Received an empty or invalid response from the AI.');
+    }
+    
+    const parsedJson = JSON.parse(aiResponseText);
+    
+    return NextResponse.json(parsedJson);
+
   } catch (error) {
-    console.error('Generate Questions API error:', error);
-    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+    console.error('API Error:', error.message);
+    return new Response(JSON.stringify({ error: error.message }), { 
+      status: 500, 
+      headers: { 'Content-Type': 'application/json' } 
+    });
   }
 }

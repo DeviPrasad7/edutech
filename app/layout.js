@@ -72,7 +72,7 @@ export default function RootLayout({ children }) {
                       href="/"
                       className="text-2xl font-extrabold tracking-wide text-indigo-400"
                     >
-                      EduSphere
+                      EduTech
                     </Link>
                     <div className="hidden md:block">
                       <div className="ml-10 flex items-baseline space-x-4">
