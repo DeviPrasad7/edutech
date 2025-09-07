@@ -23,7 +23,7 @@ export default function Announcements() {
   return (
     <div className="space-y-4">
       {announcements.length === 0 ? (
-        <p className="text-gray-500 text-center py-8">No announcements yet.</p>
+        <p className="text-gray-800 text-center py-8">No announcements yet.</p>
       ) : (
         <div className="space-y-4">
           {announcements.map((ann) => (

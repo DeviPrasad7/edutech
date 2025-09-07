@@ -1,100 +1,96 @@
+// components/UploadMaterialForm.jsx
 'use client';
-import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import toast from 'react-hot-toast';
 
-export default function UploadMaterialForm({ closeModal }) {
-  const [form, setForm] = useState({
-    subject: '',
-    topic: '',
-    description: '',
-    tags: '',
-    file: null,
-  });
+export default function UploadMaterialForm({ onUploadSuccess }) {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+  } = useForm();
 
-  function handleChange(e) {
-    const { name, value, files } = e.target;
-    setForm((prev) => ({ ...prev, [name]: files ? files[0] : value }));
-  }
-
-  async function handleSubmit(e) {
-    e.preventDefault();
+  const onSubmit = async (data) => {
     const formData = new FormData();
-    Object.entries(form).forEach(([key, val]) => {
-      if (val) formData.append(key, val);
-    });
+    formData.append('subject', data.subject);
+    formData.append('topic', data.topic);
+    formData.append('description', data.description);
+    formData.append('tags', data.tags);
+    formData.append('file', data.file[0]);
+
+    const loadingToast = toast.loading('Uploading material...');
 
     try {
+      // The API endpoint remains the same
       const res = await fetch('/api/upload-material', {
         method: 'POST',
         body: formData,
       });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        alert('Material uploaded successfully!');
-        closeModal();
-      } else {
-        alert(data.error || 'Upload failed');
+
+      const result = await res.json();
+      if (!res.ok) {
+        throw new Error(result.error || 'Upload failed');
       }
+
+      toast.success('Material uploaded successfully!', { id: loadingToast });
+      reset(); // Clear the form fields
+      onUploadSuccess(); // Trigger the refresh and close the modal
+
     } catch (err) {
-      alert('Upload error: ' + err.message);
+      toast.error(err.message, { id: loadingToast });
     }
-  }
+  };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      <h2 className="text-2xl font-semibold text-primary mb-4">Upload Study Material</h2>
-      <input
-        name="subject"
-        type="text"
-        placeholder="Subject"
-        required
-        onChange={handleChange}
-        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-primary"
-      />
-      <input
-        name="topic"
-        type="text"
-        placeholder="Topic"
-        required
-        onChange={handleChange}
-        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-primary"
-      />
-      <textarea
-        name="description"
-        placeholder="Description"
-        rows={3}
-        onChange={handleChange}
-        className="w-full px-3 py-2 border border-gray-300 rounded resize-none focus:ring-2 focus:ring-primary"
-      />
-      <input
-        name="tags"
-        type="text"
-        placeholder="Tags (comma separated)"
-        onChange={handleChange}
-        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-primary"
-      />
-      <input
-        name="file"
-        type="file"
-        accept=".pdf,image/*"
-        required
-        onChange={handleChange}
-        className="w-full px-3 py-2 border border-gray-300 cursor-pointer rounded focus:outline-none focus:ring-2 focus:ring-primary"
-      />
-      <div className="flex justify-end gap-4">
-        <button
-          type="button"
-          onClick={closeModal}
-          className="text-gray-600 hover:underline"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          className="rounded bg-primary px-6 py-2 text-white font-semibold hover:bg-blue-700"
-        >
-          Upload
-        </button>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <div>
+        <label className="block mb-1 font-medium text-gray-300">Subject</label>
+        <input
+          {...register('subject', { required: 'Subject is required' })}
+          className="w-full p-2 rounded-md bg-slate-700 text-white border border-slate-600"
+        />
+        {errors.subject && <p className="text-rose-400 mt-1 text-sm">{errors.subject.message}</p>}
       </div>
+      <div>
+        <label className="block mb-1 font-medium text-gray-300">Topic</label>
+        <input
+          {...register('topic', { required: 'Topic is required' })}
+          className="w-full p-2 rounded-md bg-slate-700 text-white border border-slate-600"
+        />
+        {errors.topic && <p className="text-rose-400 mt-1 text-sm">{errors.topic.message}</p>}
+      </div>
+      <div>
+        <label className="block mb-1 font-medium text-gray-300">Description</label>
+        <textarea
+          {...register('description')}
+          rows={3}
+          className="w-full p-0 rounded-md bg-slate-700 text-white border border-slate-600"
+        />
+      </div>
+      <div>
+        <label className="block mb-1 font-medium text-gray-300">Tags (comma-separated)</label>
+        <input
+          {...register('tags')}
+          className="w-full p-2 rounded-md bg-slate-700 text-white border border-slate-600"
+        />
+      </div>
+      <div>
+        <label className="block mb-1 font-medium text-gray-300">File</label>
+        <input
+          type="file"
+          {...register('file', { required: 'A file is required' })}
+          className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+        />
+        {errors.file && <p className="text-rose-400 mt-1 text-sm">{errors.file.message}</p>}
+      </div>
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        className="w-full py-3 bg-indigo-500 text-white rounded-lg font-semibold hover:bg-indigo-600 disabled:opacity-50 transition"
+      >
+        {isSubmitting ? 'Uploading...' : 'Upload Material'}
+      </button>
     </form>
   );
 }
