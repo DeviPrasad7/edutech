@@ -15,7 +15,7 @@ const CloseIcon = () => (
 export default function ChatWidget() { // UPDATED: Renamed component
   const [input, setInput] = useState('');
   const [chatHistory, setChatHistory] = useState([
-    { from: 'bot', text: "Hello! How can I help you with your studies today?" }
+    { from: 'bot', text: "Hello I am EduTech! How can I help you with your studies today?" }
   ]);
   const [loading, setLoading] = useState(false);
   const chatEndRef = useRef(null);
@@ -69,7 +69,7 @@ async function sendMessage() {
     <div className="bg-slate-800 p-4 rounded-xl max-w-md w-full flex flex-col h-[36rem] border border-slate-700 shadow-2xl">
       {/* NEW: Widget Header */}
       <div className="flex justify-between items-center pb-3 border-b border-slate-700 mb-3">
-        <h2 className="text-lg font-bold text-white">EduSphere AI Assistant</h2>
+        <h2 className="text-lg font-bold text-white">EduTech AI Assistant</h2>
         <button
             onClick={toggleChat}
             className="text-gray-400 hover:text-white transition-colors"
